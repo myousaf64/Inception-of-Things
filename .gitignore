@@ -1,0 +1,8 @@
+# Vagrant state (also holds the generated K3s join token)
+.vagrant/
+*.box
+
+# Local-only material
+IOT.pdf
+claudedocs/
+.superpowers/
