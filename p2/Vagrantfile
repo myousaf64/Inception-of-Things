@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+LOGIN     = "shamzaou"
+BOX_URL   = "https://dl.rockylinux.org/pub/rocky/10/images/x86_64/" \
+            "Rocky-10-Vagrant-Vbox.latest.x86_64.vagrant.virtualbox.box"
+SERVER    = "#{LOGIN}S"
+SERVER_IP = "192.168.56.110"
+CONFS_DIR = "/tmp/iot-confs" # where the manifests are copied inside the VM
+
+Vagrant.configure("2") do |config|
+  config.vm.box     = "rockylinux/10"
+  config.vm.box_url = BOX_URL
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  config.vm.define SERVER do |server|
+    server.vm.hostname = SERVER
+    server.vm.network :private_network, ip: SERVER_IP
+
+    server.vm.provider "virtualbox" do |vb|
+      vb.name         = SERVER
+      vb.cpus         = 1
+      vb.memory       = 1024
+      vb.linked_clone = true
+    end
+
+    server.vm.provision :file, source: "confs", destination: CONFS_DIR
+    server.vm.provision :shell, path: "scripts/setup.sh",
+                                env: { "NODE_IP" => SERVER_IP, "CONFS_DIR" => CONFS_DIR }
+  end
+end

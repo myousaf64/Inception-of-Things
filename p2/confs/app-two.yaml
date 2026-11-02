@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-two
+  labels:
+    app: app-two
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-two
+  template:
+    metadata:
+      labels:
+        app: app-two
+    spec:
+      containers:
+        - name: whoami
+          image: traefik/whoami:v1.12.0
+          args: ["--name", "app2"]
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-two
+spec:
+  selector:
+    app: app-two
+  ports:
+    - port: 80
+      targetPort: 80
