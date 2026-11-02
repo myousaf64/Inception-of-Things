@@ -6,3 +6,6 @@
 IOT.pdf
 claudedocs/
 .superpowers/
+
+# macOS
+.DS_Store

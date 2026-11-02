@@ -1,0 +1,50 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require "fileutils"
+require "securerandom"
+
+LOGIN     = "shamzaou"
+BOX_URL   = "https://dl.rockylinux.org/pub/rocky/10/images/x86_64/" \
+            "Rocky-10-Vagrant-Vbox.latest.x86_64.vagrant.virtualbox.box"
+SERVER_IP = "192.168.56.110"
+
+# Machines are brought up in this order, so the server is ready before the agent joins.
+NODES = {
+  "#{LOGIN}S"  => { ip: SERVER_IP,        role: "server" },
+  "#{LOGIN}SW" => { ip: "192.168.56.111", role: "agent" },
+}.freeze
+
+# Shared secret used by both nodes to form the cluster. Generated once and kept
+# in .vagrant/ (git-ignored) so it survives `vagrant reload` and `vagrant provision`.
+def k3s_token
+  path = File.join(__dir__, ".vagrant", "k3s-token")
+  return File.read(path).strip if File.exist?(path)
+
+  FileUtils.mkdir_p(File.dirname(path))
+  SecureRandom.hex(32).tap { |token| File.write(path, token) }
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.box     = "rockylinux/10"
+  config.vm.box_url = BOX_URL
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  NODES.each do |name, node|
+    config.vm.define name do |machine|
+      machine.vm.hostname = name
+      machine.vm.network :private_network, ip: node[:ip]
+
+      machine.vm.provider "virtualbox" do |vb|
+        vb.name         = name
+        vb.cpus         = 1
+        vb.memory       = 1024
+        vb.linked_clone = true
+      end
+
+      env = { "ROLE" => node[:role], "NODE_IP" => node[:ip], "K3S_TOKEN" => k3s_token }
+      env["SERVER_IP"] = SERVER_IP if node[:role] == "agent"
+      machine.vm.provision :shell, path: "scripts/install-k3s.sh", env: env
+    end
+  end
+end
